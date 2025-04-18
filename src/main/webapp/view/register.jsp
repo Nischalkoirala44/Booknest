@@ -56,6 +56,9 @@
         Registration successful! You can now <a href="login.jsp">login</a>.
         <% } %>
     </p>
+    <p style="text-align: center;">
+        Already have an account? <a href="${pageContext.request.contextPath}/view/login.jsp">Login here</a>.
+    </p>
 </form>
 </body>
 </html>

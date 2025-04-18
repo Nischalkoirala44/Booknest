@@ -53,16 +53,23 @@
             text-align: center;
             color: #333;
         }
+        .loading {
+            display: none;
+            text-align: center;
+            color: #555;
+            font-size: 0.9em;
+        }
     </style>
 </head>
 <body>
 <h2>Login</h2>
 
-<form method="post" action="${pageContext.request.contextPath}/login">
+<form id="loginForm" method="post" action="${pageContext.request.contextPath}/login">
     <input type="email" name="email" placeholder="Email" required />
     <input type="password" name="password" placeholder="Password" required />
-    <button type="submit">Login</button>
+    <button type="submit" id="submitButton">Login</button>
 
+    <p class="loading" id="loadingMessage">Processing...</p>
     <p class="success">
         <% if (request.getParameter("registerSuccess") != null) { %>
         Registration successful! Please login below.
@@ -72,7 +79,22 @@
 </form>
 
 <p style="text-align: center;">
-    Don't have an account? <a href="./register.jsp">Register here</a>.
+    Don't have an account? <a href="${pageContext.request.contextPath}/view/register.jsp">Register here</a>.
 </p>
+
+<script>
+    document.getElementById('loginForm').addEventListener('submit', function(e) {
+        const emailInput = document.querySelector('input[name="email"]');
+        const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailPattern.test(emailInput.value)) {
+            e.preventDefault();
+            alert('Please enter a valid email address.');
+            return;
+        }
+        // Show loading message
+        document.getElementById('loadingMessage').style.display = 'block';
+        document.getElementById('submitButton').disabled = true;
+    });
+</script>
 </body>
 </html>

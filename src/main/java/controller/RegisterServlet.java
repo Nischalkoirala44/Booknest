@@ -62,7 +62,7 @@ public class RegisterServlet extends HttpServlet {
         try {
             int userId = UserDAO.registerUser(newUser);
             if (userId != -1) {
-                response.sendRedirect("login.jsp?registerSuccess=true");
+                response.sendRedirect(request.getContextPath() + "/view/login.jsp?registerSuccess=true");
             } else {
                 request.setAttribute("error", "Registration failed. Email may already be in use.");
                 request.getRequestDispatcher("view/register.jsp").forward(request, response);
