@@ -4,49 +4,78 @@ import dao.UserDAO;
 import model.User;
 
 import jakarta.servlet.ServletException;
+import jakarta.servlet.annotation.MultipartConfig;
 import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.*;
-import java.io.IOException;
 
-@WebServlet("/RegisterServlet")
+import java.io.IOException;
+import java.io.InputStream;
+
+@WebServlet("/register")
+@MultipartConfig(maxFileSize = 1024 * 1024 * 5) // 5MB max file size
 public class RegisterServlet extends HttpServlet {
 
     @Override
     protected void doPost(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
 
-        // Get form data
         String name = request.getParameter("name");
         String email = request.getParameter("email");
         String password = request.getParameter("password");
         String roleParam = request.getParameter("role");
 
-        // Convert role string to enum
-        User.Role role = User.Role.user; // default role
+        // Validate inputs
+        if (name == null || email == null || password == null || name.trim().isEmpty() || email.trim().isEmpty() || password.trim().isEmpty()) {
+            request.setAttribute("error", "All fields are required.");
+            request.getRequestDispatcher("view/register.jsp").forward(request, response);
+            return;
+        }
+
+        User.Role role = User.Role.user;
         if (roleParam != null && roleParam.equalsIgnoreCase("admin")) {
             role = User.Role.admin;
         }
 
-        // Create User object
-        User newUser = new User(name, email, password, role, null);
+        // Handle file upload
+        byte[] profilePicture = null;
+        Part filePart = request.getPart("profilePicture");
+        if (filePart != null && filePart.getSize() > 0) {
+            String contentType = filePart.getContentType();
+            if (!contentType.startsWith("image/")) {
+                request.setAttribute("error", "Only image files are allowed.");
+                request.getRequestDispatcher("view/register.jsp").forward(request, response);
+                return;
+            }
+            if (filePart.getSize() > 5 * 1024 * 1024) {
+                request.setAttribute("error", "Profile picture is too large. Maximum size is 5MB.");
+                request.getRequestDispatcher("view/register.jsp").forward(request, response);
+                return;
+            }
+            try (InputStream inputStream = filePart.getInputStream()) {
+                profilePicture = inputStream.readAllBytes();
+                System.out.println("Image size: " + (profilePicture != null ? profilePicture.length : 0) + " bytes"); // Debugging
+            }
+        }
 
-        // Register user
-        int userId = UserDAO.registerUser(newUser);
+        User newUser = new User(name, email, password, role, profilePicture);
 
-        if (userId != -1) {
-            // Registration successful — redirect to login
-            response.sendRedirect("login.jsp?registerSuccess=true");
-        } else {
-            // Registration failed
-            request.setAttribute("error", "Registration failed. Try again.");
-            request.getRequestDispatcher("register.jsp").forward(request, response);
+        try {
+            int userId = UserDAO.registerUser(newUser);
+            if (userId != -1) {
+                response.sendRedirect("login.jsp?registerSuccess=true");
+            } else {
+                request.setAttribute("error", "Registration failed. Email may already be in use.");
+                request.getRequestDispatcher("view/register.jsp").forward(request, response);
+            }
+        } catch (RuntimeException e) {
+            request.setAttribute("error", "Registration failed: " + e.getMessage());
+            request.getRequestDispatcher("view/register.jsp").forward(request, response);
         }
     }
 
-    // Optional: Redirect GET requests to the register page
     @Override
     protected void doGet(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
-        response.sendRedirect("register.jsp");
+        request.getRequestDispatcher("view/register.jsp").forward(request, response);
     }
 }

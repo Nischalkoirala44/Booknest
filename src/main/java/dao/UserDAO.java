@@ -3,61 +3,60 @@ package dao;
 import model.User;
 import util.DBConnection;
 
-import java.sql.Connection;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
-import java.sql.SQLException;
+import java.sql.*;
 
 public class UserDAO {
-    // SQL query to insert a new user into the database
-    public static final String INSERT_USER = "INSERT INTO users(name,email,password,role, profile_picture) VALUES(?,?,?,?, ?)";
 
-    // SQL query to select a user by email and password for authentication
-    public static final String SELECT_USER_BY_EMAIL_PASSWORD = "SELECT * FROM users WHERE email = ? AND password = ?";
+    private static final String INSERT_USER =
+            "INSERT INTO users(name, email, password, role, profile_picture) VALUES(?, ?, ?, ?, ?)";
 
-    // SQL query to select a user by ID
-    public static final String SELECT_USER_BY_ID = "SELECT * FROM users WHERE id = ?";
-    private static final String INITIAL_USER = "";
+    private static final String SELECT_USER_BY_EMAIL_PASSWORD =
+            "SELECT * FROM users WHERE email = ? AND password = ?";
+
+    private static final String SELECT_USER_BY_ID =
+            "SELECT * FROM users WHERE id = ?";
 
     public static int registerUser(User user) {
         try (Connection connection = DBConnection.getDbConnection();
-             PreparedStatement ps = connection.prepareStatement(INITIAL_USER, PreparedStatement.RETURN_GENERATED_KEYS);) {
-            // Set parameters for the prepared statement
+             PreparedStatement ps = connection.prepareStatement(INSERT_USER, Statement.RETURN_GENERATED_KEYS)) {
+
             ps.setString(1, user.getName());
             ps.setString(2, user.getEmail());
-            ps.setString(3, user.getPassword()); // In production, this should be hashed
+            ps.setString(3, user.getPassword()); // In production, hash this
             ps.setString(4, user.getRole().name());
             ps.setBytes(5, user.getImage());
 
-            // Execute the insert statement
             int rows = ps.executeUpdate();
+            System.out.println("Rows affected: " + rows); // Debugging
 
-            // If insertion was successful, get the generated user ID
             if (rows > 0) {
                 ResultSet generatedKeys = ps.getGeneratedKeys();
                 if (generatedKeys.next()) {
-                    return generatedKeys.getInt(1);
+                    int userId = generatedKeys.getInt(1);
+                    System.out.println("Registered user ID: " + userId); // Debugging
+                    return userId;
                 }
             }
+
         } catch (SQLException e) {
-            // Log the exception details for debugging
             System.err.println("Error registering user: " + e.getMessage());
-            throw new RuntimeException(e);
+            e.printStackTrace(); // Detailed stack trace for debugging
+            throw new RuntimeException("Database error during registration", e);
         }
-        return -1; // Return -1 to indicate registration failure
+
+        System.err.println("No rows affected or no keys generated");
+        return -1;
     }
 
     public static User loginUser(User user) {
         try (Connection connection = DBConnection.getDbConnection();
-             PreparedStatement ps = connection.prepareStatement(SELECT_USER_BY_EMAIL_PASSWORD);) {
-            // Set parameters for the prepared statement
-            ps.setString(1, user.getEmail());
-            ps.setString(2, user.getPassword()); // In production, use password hashing
+             PreparedStatement ps = connection.prepareStatement(SELECT_USER_BY_EMAIL_PASSWORD)) {
 
-            // Execute the query
+            ps.setString(1, user.getEmail());
+            ps.setString(2, user.getPassword());
+
             ResultSet rs = ps.executeQuery();
 
-            // If a matching user is found, create and return a User object
             if (rs.next()) {
                 User userFromDB = new User();
                 userFromDB.setUserId(rs.getInt("id"));
@@ -68,24 +67,22 @@ public class UserDAO {
                 userFromDB.setImage(rs.getBytes("profile_picture"));
                 return userFromDB;
             }
+
         } catch (SQLException e) {
-            // Log the exception details for debugging
             System.err.println("Error authenticating user: " + e.getMessage());
-            throw new RuntimeException(e);
+            throw new RuntimeException("Database error during login", e);
         }
-        return null; // Return null if authentication fails
+
+        return null;
     }
 
     public static User getUserById(int id) {
         try (Connection connection = DBConnection.getDbConnection();
-             PreparedStatement ps = connection.prepareStatement(SELECT_USER_BY_ID);) {
-            // Set the user ID parameter
-            ps.setInt(1, id);
+             PreparedStatement ps = connection.prepareStatement(SELECT_USER_BY_ID)) {
 
-            // Execute the query
+            ps.setInt(1, id);
             ResultSet rs = ps.executeQuery();
 
-            // If the user is found, create and return a User object
             if (rs.next()) {
                 User userFromDB = new User();
                 userFromDB.setUserId(rs.getInt("id"));
@@ -96,12 +93,12 @@ public class UserDAO {
                 userFromDB.setImage(rs.getBytes("profile_picture"));
                 return userFromDB;
             }
+
         } catch (SQLException e) {
-            // Log the exception details for debugging
             System.err.println("Error retrieving user by ID: " + e.getMessage());
-            throw new RuntimeException(e);
+            throw new RuntimeException("Database error retrieving user", e);
         }
-        return null; // Return null if user not found
+
+        return null;
     }
 }
-

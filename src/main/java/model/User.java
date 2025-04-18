@@ -4,24 +4,13 @@ import java.io.Serializable;
 
 public class User implements Serializable {
 
-    public enum Role{admin, user}
+    public enum Role {admin, user}
 
-    // Unique identifier for the user
     private int userId;
-
-    // User's full name
     private String name;
-
-    // User's email address (used for login)
     private String email;
-
-    // User's password (should be hashed in production)
     private String password;
-
-    // User's role (admin or regular user)
     private Role role;
-
-    // User's profile picture stored as byte array
     private byte[] image;
 
     public User() {
